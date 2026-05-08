@@ -4,18 +4,23 @@
 #include <float.h>
 #include <time.h>
 
+/* Structure d'un drone */
 typedef struct {
+
     int id;
     float x;
     float y;
     float z;
+
 } Drone;
 
-// paire la plus proche trouvee
+/* Deux drones les plus proches */
 Drone *meilleur1 = NULL;
 Drone *meilleur2 = NULL;
 
-// distance au carre
+/* -----------------------------------------
+   Distance au carre entre deux drones
+   ----------------------------------------- */
 float distCarre(Drone *a, Drone *b) {
 
     float dx = a->x - b->x;
@@ -25,7 +30,9 @@ float distCarre(Drone *a, Drone *b) {
     return dx * dx + dy * dy + dz * dz;
 }
 
-// tri par X
+/* -----------------------------------------
+   Tri des drones selon X
+   ----------------------------------------- */
 int trierX(const void *a, const void *b) {
 
     Drone *d1 = (Drone *)a;
@@ -40,7 +47,9 @@ int trierX(const void *a, const void *b) {
     return 0;
 }
 
-// tri des pointeurs par Y
+/* -----------------------------------------
+   Tri des pointeurs selon Y
+   ----------------------------------------- */
 int trierY(const void *a, const void *b) {
 
     Drone *d1 = *(Drone **)a;
@@ -55,10 +64,12 @@ int trierY(const void *a, const void *b) {
     return 0;
 }
 
-// algorithme divide and conquer
+/* -----------------------------------------
+   Recherche de la paire la plus proche
+   ----------------------------------------- */
 float plusProche(Drone *tab, int n) {
 
-    // cas de base
+    /* Cas simple */
     if (n <= 3) {
 
         float dmin = FLT_MAX;
@@ -67,7 +78,8 @@ float plusProche(Drone *tab, int n) {
 
             for (int j = i + 1; j < n; j++) {
 
-                float d = distCarre(tab + i, tab + j);
+                float d =
+                    distCarre(tab + i, tab + j);
 
                 if (d < dmin) {
 
@@ -82,23 +94,27 @@ float plusProche(Drone *tab, int n) {
         return dmin;
     }
 
-    // division
-    int mid = n / 2;
+    /* Separation */
+    int milieu = n / 2;
 
-    float xMilieu = (tab + mid)->x;
+    float xMilieu =
+        (tab + milieu)->x;
 
-    // partie gauche
-    float dGauche = plusProche(tab, mid);
+    /* Partie gauche */
+    float dGauche =
+        plusProche(tab, milieu);
 
     Drone *save1 = meilleur1;
     Drone *save2 = meilleur2;
 
-    // partie droite
-    float dDroite = plusProche(tab + mid, n - mid);
+    /* Partie droite */
+    float dDroite =
+        plusProche(tab + milieu,
+                   n - milieu);
 
+    /* Distance minimale */
     float dmin;
 
-    // garder la meilleure paire
     if (dGauche <= dDroite) {
 
         dmin = dGauche;
@@ -111,59 +127,84 @@ float plusProche(Drone *tab, int n) {
         dmin = dDroite;
     }
 
-    // largeur de la bande centrale
+    /* Distance actuelle */
     float delta = sqrtf(dmin);
 
-    // allocation bande
-    Drone **bande = (Drone **)malloc(n * sizeof(Drone *));
+    /* Zone centrale */
+    Drone **zone =
+        (Drone **)malloc(
+            n * sizeof(Drone *)
+        );
 
-    if (!bande) {
+    if (!zone) {
 
-        printf("Erreur allocation bande\n");
+        printf("Erreur memoire\n");
         exit(1);
     }
 
     int nb = 0;
 
-    // construction bande
+    /* Drones proches du milieu */
     for (int i = 0; i < n; i++) {
 
-        if (fabsf((tab + i)->x - xMilieu) < delta) {
+        if (fabsf(
+            (tab + i)->x - xMilieu
+            ) < delta) {
 
-            *(bande + nb) = tab + i;
+            *(zone + nb) = tab + i;
+
             nb++;
         }
     }
 
-    // tri par Y
-    qsort(bande, nb, sizeof(Drone *), trierY);
+    /* Tri selon Y */
+    qsort(zone,
+          nb,
+          sizeof(Drone *),
+          trierY);
 
-    // verification bande centrale
+    /* Verification */
     for (int i = 0; i < nb - 1; i++) {
 
         for (int j = i + 1; j < nb; j++) {
 
-            // optimisation
-            if ((*(bande + j))->y - (*(bande + i))->y >= delta)
+            float dy =
+                (*(zone + j))->y -
+                (*(zone + i))->y;
+
+            /* inutile d'aller plus loin */
+            if (dy >= delta)
                 break;
 
-            float d = distCarre(*(bande + i), *(bande + j));
+            float d =
+                distCarre(
+                    *(zone + i),
+                    *(zone + j)
+                );
 
             if (d < dmin) {
 
                 dmin = d;
 
-                meilleur1 = *(bande + i);
-                meilleur2 = *(bande + j);
+                meilleur1 =
+                    *(zone + i);
+
+                meilleur2 =
+                    *(zone + j);
+
+                delta = sqrtf(dmin);
             }
         }
     }
 
-    free(bande);
+    free(zone);
 
     return dmin;
 }
 
+/* -----------------------------------------
+   Programme principal
+   ----------------------------------------- */
 int main() {
 
     clock_t debut = clock();
@@ -173,19 +214,24 @@ int main() {
     if (n < 2) {
 
         printf("Pas assez de drones\n");
+
         return 1;
     }
 
-    // allocation dynamique
-    Drone *essaim = (Drone *)malloc(n * sizeof(Drone));
+    /* Allocation dynamique */
+    Drone *essaim =
+        (Drone *)malloc(
+            n * sizeof(Drone)
+        );
 
     if (!essaim) {
 
-        printf("Erreur allocation memoire\n");
+        printf("Erreur memoire\n");
+
         return 1;
     }
 
-    // generation aleatoire
+    /* Valeurs aleatoires */
     srand((unsigned int)time(NULL));
 
     for (int i = 0; i < n; i++) {
@@ -202,25 +248,34 @@ int main() {
             (float)(rand() % 10000);
     }
 
-    // tri obligatoire par X
-    qsort(essaim, n, sizeof(Drone), trierX);
+    /* Tri selon X */
+    qsort(essaim,
+          n,
+          sizeof(Drone),
+          trierX);
 
-    // recherche paire minimale
-    float dCarreMin = plusProche(essaim, n);
+    /* Recherche */
+    float dCarreMin =
+        plusProche(essaim, n);
 
-    float distMin = sqrtf(dCarreMin);
+    float distMin =
+        sqrtf(dCarreMin);
 
     clock_t fin = clock();
 
     double temps =
-        (double)(fin - debut) / CLOCKS_PER_SEC;
+        (double)(fin - debut)
+        / CLOCKS_PER_SEC;
 
-    // affichage
-    printf("===== SYSTEME DE COLLISION UAV =====\n\n");
+    /* Resultat */
+    printf(
+        "===== SYSTEME UAV =====\n\n"
+    );
 
     printf(
         "Drone 1 : "
-        "ID=%d | x=%.2f | y=%.2f | z=%.2f\n",
+        "ID=%d | x=%.2f | "
+        "y=%.2f | z=%.2f\n",
 
         meilleur1->id,
         meilleur1->x,
@@ -230,7 +285,8 @@ int main() {
 
     printf(
         "Drone 2 : "
-        "ID=%d | x=%.2f | y=%.2f | z=%.2f\n",
+        "ID=%d | x=%.2f | "
+        "y=%.2f | z=%.2f\n",
 
         meilleur2->id,
         meilleur2->x,
@@ -244,7 +300,7 @@ int main() {
     );
 
     printf(
-        "Temps d'execution : %.6f secondes\n",
+        "Temps execution : %.6f secondes\n",
         temps
     );
 
